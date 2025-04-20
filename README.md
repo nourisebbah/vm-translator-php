@@ -46,7 +46,7 @@ This function initializes the segment pointers (LCL, ARG, THIS, THAT) relative t
             } elseif (str_starts_with($line, 'pop')) {
                 $translated[] = $this->handlePop($line);
             } else {
-                $translated[] = " Unknown command: $line";
+                $translated[] = "Unknown command: $line";
             }
         }
         return implode("\n", $translated);
@@ -84,7 +84,7 @@ Processes a push command by extracting the segment and value, then calling the c
             'static'   => $this->popStatic($value, $line),
             'local', 'argument', 'this', 'that' => $this->popLocal($segment, $value, $line),
             'temp'     => $this->popTemp($value, $line),
-            default    => "// Unsupported pop segment: $segment"
+            default    => "Unsupported pop segment: $segment"
         };
 
         // decrement stack pointer after pop
@@ -331,7 +331,7 @@ private function handleBitwise(string $line): string
     {
         return match ($line) {
             'and', 'or' => $this->handleAndOr($line),
-            default => "// Unsupported bitwise operation: $line"
+            default => "Unsupported bitwise operation: $line"
         };
     }
     
