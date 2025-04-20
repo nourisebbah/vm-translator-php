@@ -49,7 +49,7 @@ class TranslatorService
             } elseif (in_array($line, ['and', 'or'])) {
                 $translated[] = $this->handleBitwise($line);
             } else {
-                $translated[] = "// Unknown command: $line";
+                $translated[] = "Unknown command: $line";
             }
         }
 
@@ -72,7 +72,7 @@ class TranslatorService
             'static' => $this->pushStatic($value, $line),
             'local', 'argument', 'this', 'that' => $this->pushLocal($segment, $value, $line),
             'temp' => $this->pushTemp($value, $line),
-            default => "// Unsupported push segment: $segment"
+            default => "Unsupported push segment: $segment"
         };
         $this->stackPointer++;
         return $asmCode;
@@ -85,7 +85,7 @@ class TranslatorService
             'static' => $this->popStatic($value, $line),
             'local', 'argument', 'this', 'that' => $this->popLocal($segment, $value, $line),
             'temp' => $this->popTemp($value, $line),
-            default => "// Unsupported pop segment: $segment"
+            default => "Unsupported pop segment: $segment"
         };
         $this->stackPointer--;
         return $asmCode;
@@ -273,7 +273,7 @@ ASM;
     {
         return match ($line) {
             'and', 'or' => $this->handleAndOr($line),
-            default => "// Unsupported bitwise operation: $line"
+            default => "Unsupported bitwise operation: $line"
         };
     }
     
