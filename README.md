@@ -74,14 +74,10 @@ ASM;
     }
 
 This Function performs a conditional jump.
- It pops the top value from the stack and jumps to the label only if that value is not zero using JNE.
-
-    @SP + AM=M-1 decreases the stack pointer and accesses the top value.
-
-    D=M stores that value in D.
-
-    @label + D;JNE performs the jump if D is not zero.
-
+It pops the top value from the stack and jumps to the label only if that value is not zero using JNE.
+@SP + AM=M-1 decreases the stack pointer and accesses the top value.
+D=M stores that value in D.
+@label + D;JNE performs the jump if D is not zero.
 
  private function handleFunction(string $line): string
     {
@@ -105,7 +101,8 @@ This Function performs a conditional jump.
     }
 
 $functionName is the function label, and $nVars is the number of local variables.
-    For each variable,  push 0 onto the stack and increment SP, effectively initializing local variables to 0.
+For each variable,  push 0 onto the stack and increment SP,
+effectively initializing local variables to 0.
 
     private function handleCall(string $line): string
     {
@@ -173,12 +170,12 @@ $functionName is the function label, and $nVars is the number of local variables
 I extracted the function being called and its argument count.
 Then, I generated a unique return label to jump back to after the function finishes executing.
 In assembly:
-    I stored the return label address in the D register.
- incremented the stack pointer.
+I stored the return label address in the D register.
+incremented the stack pointer.
 After that, I saved the current values of LCL, ARG, THIS, and THAT to the stack in the same way, each time incrementing the stack pointer.
 Next:
-    I subtracted the number of arguments from the current value of SP, then subtracted 5 more.
-        [this is cuz when we call a function, the ARG pointer must point 5 positions below the current top of the stack, That’s due to the five values we just pushed (return address, LCL, ARG, THIS, THAT)].
+I subtracted the number of arguments from the current value of SP, then subtracted 5 more.
+[this is cuz when we call a function, the ARG pointer must point 5 positions below the current top of the stack, That’s due to the five values we just pushed (return address, LCL, ARG, THIS, THAT)].
 I then set ARG to this new computed value and set LCL to the current value of SP.
 Finally, I jumped to the function’s code using JMP.
 The return label marks where the execution should resume after the function completes.
