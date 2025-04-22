@@ -1,5 +1,5 @@
 # Project 8 - Nand2Tetris (VM Translator Part 2)
-This project is the 8th from the Nand2Tetris book and focuses on VM Translator Part 2.
+#This project is the 8th from the Nand2Tetris book and focuses on VM Translator Part 2.
 In this project, I extended the functionality of the VM translator by introducing support for labels and goto commands, enabling more complex control flow in the generated Hack Assembly. I also implemented the handling of function calls and returns. This project helped deepen my understanding of low-level programming concepts.
 
 ---
