@@ -19,7 +19,7 @@ class TranslatorService
     ];
 
     private int $labelCounter = 0;
-
+    private int $ReturnlabelCounter = 0;
     private function initializePointers()
     {
         $this->LCL = $this->stackPointer;
@@ -32,25 +32,42 @@ class TranslatorService
     {
         $this->initializePointers();
 
-        $lines = explode("\n", $vmcode);
+        $lines = explode("\n", $vmcode); // i dont need a co
         $cleaned = $this->cleanLines($lines);
 
         $translated = [];
         foreach ($cleaned as $line) {
             $line = trim($line);
-            if (str_starts_with($line, 'push')) {
-                $translated[] = $this->handlePush($line);
-            } elseif (str_starts_with($line, 'pop')) {
-                $translated[] = $this->handlePop($line);
-            } elseif (in_array($line, ['add', 'sub', 'neg', 'not'])) {
-                $translated[] = $this->handleArithmeticOperation($line);
-            } elseif (in_array($line, ['eq', 'gt', 'lt'])) {
-                $translated[] = $this->handleComparison($line);
-            } elseif (in_array($line, ['and', 'or'])) {
-                $translated[] = $this->handleBitwise($line);
+        
+            $handlers = [
+                'push'     => 'handlePush',
+                'pop'      => 'handlePop',
+                'add'      => 'handleArithmeticOperation',
+                'sub'      => 'handleArithmeticOperation',
+                'neg'      => 'handleArithmeticOperation',
+                'not'      => 'handleArithmeticOperation',
+                'eq'       => 'handleComparison',
+                'gt'       => 'handleComparison',
+                'lt'       => 'handleComparison',
+                'and'      => 'handleBitwise',
+                'or'       => 'handleBitwise',
+                'label'    => 'handleLabel',
+                'goto'     => 'handleGoto',
+                'if-goto'  => 'handleIfGoto',
+                'function' => 'handleFunction',
+                'call'     => 'handleCall',
+                'return'   => 'handleReturn',
+            ];
+        
+            $command = strtok($line, ' ');
+        
+            if (isset($handlers[$command])) {
+                $method = $handlers[$command];
+                $translated[] = $this->$method($line);
             } else {
-                $translated[] = "Unknown command: $line";
+                $translated[] = "// Unknown command: $line";
             }
+                
         }
 
         return implode("\n", $translated);
@@ -72,7 +89,7 @@ class TranslatorService
             'static' => $this->pushStatic($value, $line),
             'local', 'argument', 'this', 'that' => $this->pushLocal($segment, $value, $line),
             'temp' => $this->pushTemp($value, $line),
-            default => "Unsupported push segment: $segment"
+            default => "// Unsupported push segment: $segment"
         };
         $this->stackPointer++;
         return $asmCode;
@@ -85,7 +102,7 @@ class TranslatorService
             'static' => $this->popStatic($value, $line),
             'local', 'argument', 'this', 'that' => $this->popLocal($segment, $value, $line),
             'temp' => $this->popTemp($value, $line),
-            default => "Unsupported pop segment: $segment"
+            default => "// Unsupported pop segment: $segment"
         };
         $this->stackPointer--;
         return $asmCode;
@@ -273,7 +290,7 @@ ASM;
     {
         return match ($line) {
             'and', 'or' => $this->handleAndOr($line),
-            default => "Unsupported bitwise operation: $line"
+            default => "// Unsupported bitwise operation: $line"
         };
     }
     
@@ -288,6 +305,167 @@ ASM;
     D=M
     A=A-1
     M=$operationCode
+    ASM;
+    }
+    private function handleLabel(string $line): string
+    {
+        $label = explode(' ', $line)[1];
+        return "({$label})";
+    }
+
+    private function handleGoto(string $line): string
+    {
+        $label = explode(' ', $line)[1];
+        return <<<ASM
+// goto $label
+@{$label}
+0;JMP
+ASM;
+    }
+
+    private function handleIfGoto(string $line): string
+    {
+        $label = explode(' ', $line)[1];
+        return <<<ASM
+// if-goto $label
+@SP
+AM=M-1
+D=M
+@{$label}
+D;JNE
+ASM;
+    }
+
+    private function handleFunction(string $line): string
+    {
+        $parts = explode(' ', $line);
+        $functionName = $parts[1];
+        $nVars = (int)$parts[2];
+        $code = "($functionName)\n";
+    
+        for ($i = 0; $i < $nVars; $i++) {
+            $code .= "// initialize local var $i\n";
+            $code .= "@0\n";
+            $code .= "D=A\n";
+            $code .= "@SP\n";
+            $code .= "A=M\n";
+            $code .= "M=D\n";
+            $code .= "@SP\n";
+            $code .= "M=M+1\n";
+        }
+        $this->stackPointer++;
+        return $code;
+    }
+    
+    private function handleCall(string $line): string
+    {
+        $parts = explode(' ', $line);
+        $functionName = $parts[1];
+        $nArgs = (int)$parts[2];
+    
+        $returnLabel = "RETURN_" . $this->ReturnlabelCounter++;
+    
+        return <<<ASM
+    // call $functionName $nArgs
+    @$returnLabel
+    D=A
+    @SP
+    A=M
+    M=D
+    @SP
+    M=M+1
+    @LCL
+    D=M
+    @SP
+    A=M
+    M=D
+    @SP
+    M=M+1
+    @ARG
+    D=M
+    @SP
+    A=M
+    M=D
+    @SP
+    M=M+1
+    @THIS
+    D=M
+    @SP
+    A=M
+    M=D
+    @SP
+    M=M+1
+    @THAT
+    D=M
+    @SP
+    A=M
+    M=D
+    @SP
+    M=M+1
+    @SP
+    D=M
+    @$nArgs
+    D=D-A
+    @5
+    D=D-A
+    @ARG
+    M=D
+    @SP
+    D=M
+    @LCL
+    M=D
+    @$functionName
+    0;JMP
+    ($returnLabel)
+    ASM;
+    }
+    
+    private function handleReturn(string $line): string
+    {
+        return <<<ASM
+    // return
+    @LCL
+    D=M
+    @R13
+    M=D // FRAME = LCL
+    @5
+    A=D-A
+    D=M
+    @R14
+    M=D // RET = *(FRAME-5)
+    @SP
+    AM=M-1
+    D=M
+    @ARG
+    A=M
+    M=D // *ARG = pop()
+    @ARG
+    D=M+1
+    @SP
+    M=D // SP = ARG + 1
+    @R13
+    AM=M-1
+    D=M
+    @THAT
+    M=D // THAT = *(FRAME-1)
+    @R13
+    AM=M-1
+    D=M
+    @THIS
+    M=D // THIS = *(FRAME-2)
+    @R13
+    AM=M-1
+    D=M
+    @ARG
+    M=D // ARG = *(FRAME-3)
+    @R13
+    AM=M-1
+    D=M
+    @LCL
+    M=D // LCL = *(FRAME-4)
+    @R14
+    A=M
+    0;JMP // goto RET
     ASM;
     }
     
